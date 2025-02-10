@@ -13,7 +13,9 @@ public class Main {
         for (int i = 0; i < tokens.length; i++) {
             char current = tokens[i];
 
+
             if (current == ' ') continue;
+
 
             if (Character.isDigit(current) || current == '.') {
                 StringBuilder number = new StringBuilder();
@@ -25,17 +27,19 @@ public class Main {
             } else if (current == '(') {
                 operators.push(current);
             } else if (current == ')') {
-                while (operators.peek() != '(') {
+                while (!operators.isEmpty() && operators.peek() != '(') {
                     values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
                 }
-                operators.pop();
+                if (operators.isEmpty() || operators.pop() != '(') {
+                    throw new IllegalArgumentException("Mismatched parentheses detected.");
+                }
             } else if ("+-*/".indexOf(current) != -1) {
                 while (!operators.isEmpty() && hasPrecedence(current, operators.peek())) {
                     values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
                 }
                 operators.push(current);
             } else {
-                throw new IllegalArgumentException("Invalid character in expression: " + current);
+                throw new IllegalArgumentException("Invalid character encountered: " + current);
             }
         }
 
@@ -43,12 +47,20 @@ public class Main {
             values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
         }
 
+        if (values.size() != 1) {
+            throw new IllegalArgumentException("Invalid expression format.");
+        }
+
         return values.pop();
     }
 
     private static boolean hasPrecedence(char operator1, char operator2) {
         if (operator2 == '(' || operator2 == ')') return false;
-        return (operator1 != '*' && operator1 != '/') || (operator2 == '+' || operator2 == '-');
+
+        if ((operator1 == '*' || operator1 == '/') && (operator2 == '+' || operator2 == '-')) {
+            return false;
+        }
+        return true;
     }
 
     private static double applyOperator(char operator, double b, double a) {
@@ -57,7 +69,7 @@ public class Main {
             case '-' -> a - b;
             case '*' -> a * b;
             case '/' -> {
-                if (b == 0) throw new ArithmeticException("Cannot divide by zero");
+                if (b == 0) throw new ArithmeticException("Cannot divide by zero.");
                 yield a / b;
             }
             default -> throw new IllegalArgumentException("Invalid operator: " + operator);
@@ -78,6 +90,7 @@ public class Main {
                 openParentheses--;
                 if (openParentheses < 0) return false;
             }
+
             if ("+-*/".indexOf(c) != -1 && "+-*/".indexOf(prevChar) != -1) return false;
 
             prevChar = c;
@@ -88,18 +101,22 @@ public class Main {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter a mathematical expression: ");
-        String expression = scanner.nextLine();
 
-        try {
+        try (scanner) {
+            System.out.println("Welcome to the Mathematical Expression Evaluator!");
+            System.out.print("Enter a mathematical expression (e.g., (2+3)*4/5): ");
+            String expression = scanner.nextLine();
+
+
             if (!isValidExpression(expression)) {
-                throw new IllegalArgumentException("Invalid mathematical expression.");
+                System.out.println("Error: The entered expression is invalid. Please check the syntax.");
+                return;
             }
-            System.out.println("Result: " + evaluateExpression(expression));
+            
+            double result = evaluateExpression(expression);
+            System.out.printf("Result: %.2f%n", result);
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
-        } finally {
-            scanner.close();
         }
     }
 }

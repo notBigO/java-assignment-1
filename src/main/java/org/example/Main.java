@@ -4,38 +4,38 @@ import java.util.Scanner;
 import java.util.Stack;
 
 public class Main {
+
     public static double evaluateExpression(String expression) {
-        char[] tokens = expression.toCharArray();
         Stack<Double> values = new Stack<>();
         Stack<Character> operators = new Stack<>();
+        char[] tokens = expression.toCharArray();
 
         for (int i = 0; i < tokens.length; i++) {
-            if (tokens[i] == ' ')
-                continue;
+            char current = tokens[i];
 
-            if ((tokens[i] >= '0' && tokens[i] <= '9') || tokens[i] == '.') {
-                StringBuilder sb = new StringBuilder();
+            if (current == ' ') continue;
+
+            if (Character.isDigit(current) || current == '.') {
+                StringBuilder number = new StringBuilder();
                 while (i < tokens.length && (Character.isDigit(tokens[i]) || tokens[i] == '.')) {
-                    sb.append(tokens[i]);
-                    i++;
+                    number.append(tokens[i++]);
                 }
-                values.push(Double.parseDouble(sb.toString()));
+                values.push(Double.parseDouble(number.toString()));
                 i--;
-            } else if (tokens[i] == '(') {
-                operators.push(tokens[i]);
-            } else if (tokens[i] == ')') {
-                while (!operators.isEmpty() && operators.peek() != '(') {
+            } else if (current == '(') {
+                operators.push(current);
+            } else if (current == ')') {
+                while (operators.peek() != '(') {
                     values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
                 }
-                if (operators.isEmpty() || operators.pop() != '(')
-                    throw new IllegalArgumentException("Mismatched parentheses.");
-            } else if (tokens[i] == '+' || tokens[i] == '-' || tokens[i] == '*' || tokens[i] == '/') {
-                while (!operators.isEmpty() && hasPrecedence(tokens[i], operators.peek())) {
+                operators.pop();
+            } else if ("+-*/".indexOf(current) != -1) {
+                while (!operators.isEmpty() && hasPrecedence(current, operators.peek())) {
                     values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
                 }
-                operators.push(tokens[i]);
+                operators.push(current);
             } else {
-                throw new IllegalArgumentException("Invalid character in expression: " + tokens[i]);
+                throw new IllegalArgumentException("Invalid character in expression: " + current);
             }
         }
 
@@ -47,48 +47,40 @@ public class Main {
     }
 
     private static boolean hasPrecedence(char operator1, char operator2) {
-        if (operator2 == '(' || operator2 == ')')
-            return false;
-        return (operator1 != '*' && operator1 != '/') || (operator2 != '+' && operator2 != '-');
+        if (operator2 == '(' || operator2 == ')') return false;
+        return (operator1 != '*' && operator1 != '/') || (operator2 == '+' || operator2 == '-');
     }
 
     private static double applyOperator(char operator, double b, double a) {
-        switch (operator) {
-            case '+':
-                return a + b;
-            case '-':
-                return a - b;
-            case '*':
-                return a * b;
-            case '/':
+        return switch (operator) {
+            case '+' -> a + b;
+            case '-' -> a - b;
+            case '*' -> a * b;
+            case '/' -> {
                 if (b == 0) throw new ArithmeticException("Cannot divide by zero");
-                return a / b;
-        }
-        return 0;
+                yield a / b;
+            }
+            default -> throw new IllegalArgumentException("Invalid operator: " + operator);
+        };
     }
 
     private static boolean isValidExpression(String expression) {
-        if (expression == null || expression.trim().isEmpty())
-            return false;
+        if (expression == null || expression.isBlank()) return false;
 
         int openParentheses = 0;
         char prevChar = '\0';
 
         for (char c : expression.toCharArray()) {
-            if (Character.isDigit(c) || c == '.' || c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ' ') {
-                if (c == '(') openParentheses++;
-                if (c == ')') {
-                    openParentheses--;
-                    if (openParentheses < 0) return false;
-                }
-                if ((c == '+' || c == '-' || c == '*' || c == '/') &&
-                        (prevChar == '+' || prevChar == '-' || prevChar == '*' || prevChar == '/')) {
-                    return false;
-                }
-                prevChar = c;
-            } else {
-                return false;
+            if ("0123456789.+-*/() ".indexOf(c) == -1) return false;
+
+            if (c == '(') openParentheses++;
+            if (c == ')') {
+                openParentheses--;
+                if (openParentheses < 0) return false;
             }
+            if ("+-*/".indexOf(c) != -1 && "+-*/".indexOf(prevChar) != -1) return false;
+
+            prevChar = c;
         }
 
         return openParentheses == 0;
@@ -103,8 +95,7 @@ public class Main {
             if (!isValidExpression(expression)) {
                 throw new IllegalArgumentException("Invalid mathematical expression.");
             }
-            double result = evaluateExpression(expression);
-            System.out.println("Result: " + result);
+            System.out.println("Result: " + evaluateExpression(expression));
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         } finally {
